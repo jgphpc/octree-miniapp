@@ -1,7 +1,8 @@
 all: neighbor_search.exe
 
 CXX = CC
-NVCC = nvcc -g -G -arch=sm_60 -forward-unknown-to-host-compiler
+NVCC = nvcc
+NVCCFLAGS = -g -G -arch=sm_60 -forward-unknown-to-host-compiler
 CXXFLAGS = -std=c++17 -w 
 INCFLAGS = -I $(CRAY_MPICH_DIR)/include -x cu
 LDFLAGS = $(shell pkg-config --libs cudart-11.8) $(shell pkg-config --libs nvidia-ml-11.8)
@@ -12,7 +13,7 @@ neighbor_search.exe: neighbor_search.o
 	$(PREP) $(CXX) $(CXXFLAGS) $< -o $(@) $(LDFLAGS)
 
 neighbor_search.o: neighbor_search.cu
-	$(PREP) $(NVCC) $(CXXFLAGS) $(CXXFLAGS) $(INCFLAGS) -c $< -o $(@)
+	$(PREP) $(NVCC) $(NVCCFLAGS) $(CXXFLAGS) $(INCFLAGS) -c $< -o $(@)
 
 help:
 	@echo 'patch -i neighbor_search.patch'

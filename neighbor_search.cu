@@ -38,6 +38,8 @@
 
 #include "findneighbors.hpp"
 #include "findneighbors_warps.cuh"
+#include "mpi.h"
+#include <nvml.h>
 
 // uncomment to enable warp-level optimized neighbor search
 // #define USE_WARPS
@@ -218,6 +220,31 @@ int main(int argc, char** argv)
     int  numParticles = (argc > 1) ? std::stoi(argv[1]) : 10000;
     bool verbose      = false;
 
+    // mpi & nvml:
+    nvmlReturn_t result;
+    unsigned int i = 0;
+    int rank = 0;
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    result = nvmlInit();
+    const char*     env_p = getenv("CUDA_VISIBLE_DEVICES");
+    char*           endPtr;
+    nvmlDevice_t    device;
+    char            name[NVML_DEVICE_NAME_BUFFER_SIZE];
+    nvmlPciInfo_t   pci;
+    i = strtoul(env_p, &endPtr, 10);
+    result = nvmlDeviceGetHandleByIndex(i, &device);
+    result = nvmlDeviceGetName(device, name, NVML_DEVICE_NAME_BUFFER_SIZE);
+    result = nvmlDeviceGetPciInfo(device, &pci);
+    std::cout << "CUDA_VISIBLE_DEVICES=" << i << " rank= " << rank << " " << name << " pci=" << pci.busId << std::endl;
+    // printf("CUDA_VISIBLE_DEVICES=%u rank=%u %s [%s]\n", i, rank, name, pci.busId);
+    result = nvmlShutdown();
+
     std::cout << "Performing neighbor search for " << numParticles << " particles." << std::endl;
     benchmarkGpu<double, uint64_t>(numParticles, verbose);
+
+    MPI_Finalize();
+    return 0;
 }

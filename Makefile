@@ -1,11 +1,26 @@
 all: neighbor_search.exe
 
-CXX = CC
 NVCC = nvcc
-NVCCFLAGS = -g -G -arch=sm_60 -forward-unknown-to-host-compiler
-CXXFLAGS = -std=c++17 -w 
-INCFLAGS = -I $(CRAY_MPICH_DIR)/include -x cu
-LDFLAGS = $(shell pkg-config --libs cudart-11.8) $(shell pkg-config --libs nvidia-ml-11.8)
+SM = sm_80
+NVCCFLAGS = -G -arch=$(SM) -forward-unknown-to-host-compiler
+CXXFLAGS = -g -std=c++17 -w
+
+ifdef UENV_MOUNT_LIST
+	# uenv:
+	CXX = mpicxx
+	# INCFLAGS = -I $(CRAY_MPICH_DIR)/include -x cu -ccbin=$(CXX)
+	INCFLAGS = -x cu -ccbin=$(CXX)
+	LDFLAGS = -L$(CUDA_HOME)/lib64 -L$(CUDA_HOME)/lib64/stubs \
+			  -lcudart -lnvidia-ml \
+			  -Wl,-rpath=$(CUDA_HOME)/lib64 \
+			  -Wl,-rpath=$(CUDA_HOME)/lib64/stubs
+	# LDFLAGS = $(shell pkg-config --libs cudart-11.8) $(shell pkg-config --libs nvidia-ml-11.8)
+else
+	# cpe:
+	CXX = CC
+	INCFLAGS = -x cu -ccbin=$(CXX)
+	LDFLAGS = -lcudart -lnvidia-ml -Wl,-rpath=$(GCC_PREFIX)/snos/lib64 
+endif
 
 RM := rm -f
 
@@ -16,13 +31,7 @@ neighbor_search.o: neighbor_search.cu
 	$(PREP) $(NVCC) $(NVCCFLAGS) $(CXXFLAGS) $(INCFLAGS) -c $< -o $(@)
 
 help:
-	@echo 'patch -i neighbor_search.patch'
-	@echo 'module swap PrgEnv-cray PrgEnv-gnu'
-	@echo 'module swap gcc/11.2.0'
-	@echo 'export LD_LIBRARY_PATH=$$CRAY_LD_LIBRARY_PATH:$$LD_LIBRARY_PATH'
-	@echo 'export PATH=/apps/daint/UES/hackaton/software/CUDAcore/11.8.0/bin:$$PATH'
-	@echo 'export PKG_CONFIG_PATH=/apps/daint/UES/hackaton/software/CUDAcore/11.8.0/pkgconfig:$$PKG_CONFIG_PATH'
-
+	@echo 'https://github.com/eth-cscs/alps-spack-stacks'
 
 clean:
 	-$(RM) *.o *.exe
